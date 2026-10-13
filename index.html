@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07080F">
+<meta name="apple-mobile-web-app-title" content="Tefilín">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Registra tus tefilín cada día, mantén tu racha y motiva a tus amigos.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Tefilín</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<style>
+:root{
+  --bg:#F2F2F7; --card:#fff; --label:#000; --label2:#3C3C4399; --sep:#3C3C4349; --fill:#7878801f;
+  --blue:#007AFF; --green:#34C759; --red:#FF3B30; --accent:#FF9F0A; --bar:#f9f9f9d6;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#000; --card:#1C1C1E; --label:#fff; --label2:#EBEBF599; --sep:#54545899; --fill:#7878805c; --bar:#1d1d1dd6; --accent:#FF9F0A;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:var(--font);color:var(--label);background:var(--bg);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input{font:inherit;color:inherit}
+
+/* ---- escenario: marco de iPhone en escritorio, pantalla completa en móvil ---- */
+#stage{min-height:100%;display:flex;align-items:center;justify-content:center;background:#d8d8de}
+@media (prefers-color-scheme:dark){#stage{background:#111}}
+#phone{position:relative;width:390px;height:844px;background:var(--bg);overflow:hidden;border-radius:55px;
+  box-shadow:0 0 0 11px #1a1a1c,0 0 0 13px #3a3a3d,0 40px 80px #0006}
+#island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#000;border-radius:20px;z-index:50}
+#status{position:absolute;top:0;left:0;right:0;height:54px;display:flex;justify-content:space-between;align-items:center;
+  padding:6px 32px 0 40px;font-weight:600;font-size:16px;z-index:40;pointer-events:none}
+#homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:140px;height:5px;border-radius:3px;background:var(--label);opacity:.9;z-index:60;pointer-events:none}
+@media (max-width:500px){
+  #stage{background:var(--bg);display:block}
+  #phone{width:100%;height:100dvh;border-radius:0;box-shadow:none}
+  #island,#status,#homebar{display:none}
+}
+:root{--top:54px;--bottom:34px}
+@media (max-width:500px){:root{--top:env(safe-area-inset-top);--bottom:env(safe-area-inset-bottom)}}
+
+#screen{position:absolute;inset:0;overflow-y:auto;padding:calc(var(--top) + 8px) 16px calc(var(--bottom) + 96px);scrollbar-width:none}
+#screen::-webkit-scrollbar{display:none}
+#screen.chat{padding:0}
+
+/* ---- tab bar ---- */
+#tabbar{position:absolute;left:0;right:0;bottom:0;padding:8px 0 calc(var(--bottom) - 6px);display:flex;background:var(--bar);
+  backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-top:.5px solid var(--sep);z-index:30}
+#tabbar.hide{display:none}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:500;color:#8E8E93}
+.tab svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--accent)}
+.tab.on svg{fill:currentColor;fill-opacity:.18}
+
+/* ---- tipografía iOS ---- */
+h1.large{font-size:34px;font-weight:700;letter-spacing:.37px;margin:6px 4px 2px}
+.sub{color:var(--label2);font-size:15px;margin:0 4px 14px}
+.cap{font-size:13px;color:var(--label2);text-transform:uppercase;margin:22px 16px 6px;letter-spacing:-.08px}
+.foot{font-size:13px;color:var(--label2);margin:6px 16px 0;line-height:1.35}
+
+/* ---- tarjetas / listas agrupadas ---- */
+.card{background:var(--card);border-radius:12px;overflow:hidden}
+.pad{padding:16px}
+.row{display:flex;align-items:center;min-height:44px;padding:0 16px;gap:12px;position:relative;width:100%;text-align:left}
+.row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.row .grow{flex:1}
+.row .val{color:var(--label2)}
+.row small{display:block;color:var(--label2);font-size:13px}
+.row.tall{padding-top:8px;padding-bottom:8px}
+.chev::after{content:"›";color:#C7C7CC;font-size:22px;margin-left:4px}
+.destr{color:var(--red)}
+.link{color:var(--blue)}
+
+.btn{display:block;width:100%;background:var(--accent);color:#000;font-weight:600;font-size:17px;padding:15px;border-radius:14px;text-align:center}
+.btn.tint{background:var(--fill);color:var(--blue)}
+.btn:active{opacity:.7}
+.btn[disabled]{opacity:.4}
+.field{width:100%;border:0;background:transparent;outline:0;font-size:17px;padding:12px 0}
+
+/* switch */
+.sw{position:relative;width:51px;height:31px;border-radius:16px;background:#78788052;transition:.25s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px #0004;transition:.25s}
+.sw.on{background:var(--green)}.sw.on::after{transform:translateX(20px)}
+
+/* ---- Hoy ---- */
+.hero{display:flex;flex-direction:column;align-items:center;padding:22px 16px 18px;text-align:center}
+.ring{position:relative;width:200px;height:200px}
+.ring svg{transform:rotate(-90deg);width:100%;height:100%}
+.ring circle{fill:none;stroke-width:14;stroke-linecap:round}
+.ring .bg{stroke:var(--fill)}
+.ring .fg{stroke:var(--accent);transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .num{font-size:64px;font-weight:800;line-height:1;letter-spacing:-2px}
+.ring .flame{font-size:30px;animation:pulse 1.8s ease-in-out infinite}
+.ring .flame.off{filter:grayscale(1);opacity:.4;animation:none}
+@keyframes pulse{50%{transform:scale(1.14)}}
+.hero .lbl{font-weight:600;color:var(--accent);margin-top:10px;font-size:17px}
+.hero .meta{color:var(--label2);font-size:14px;margin-top:4px}
+.shot{width:150px;height:190px;object-fit:cover;border-radius:14px;margin:10px auto 0;display:block}
+.pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.center{text-align:center}
+.big-emoji{font-size:40px}
+
+/* ---- Historial ---- */
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 10px}
+.mhead b{font-size:20px;text-transform:capitalize}
+.mhead button{font-size:30px;color:var(--accent);padding:0 10px;line-height:1}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:12px}
+.wd{text-align:center;font-size:12px;font-weight:600;color:var(--label2)}
+.day{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+.day.done{background:var(--accent);color:#000;font-weight:700}
+.day.ex{background:var(--fill)}
+.day.miss{box-shadow:inset 0 0 0 1.5px var(--red)}
+.day.fut{opacity:.3}
+.day.today{box-shadow:inset 0 0 0 2px var(--blue)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--label2);padding:12px 4px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+
+/* ---- Chat ---- */
+.navbar{position:absolute;top:0;left:0;right:0;padding:calc(var(--top) + 2px) 8px 8px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--bar);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:.5px solid var(--sep);z-index:20}
+.navbar .back{color:var(--blue);font-size:17px;min-width:70px}
+.navbar b{font-size:17px}
+.navbar .more{min-width:70px;text-align:right;color:var(--blue);font-size:22px}
+#msgs{position:absolute;top:calc(var(--top) + 46px);bottom:calc(var(--bottom) + 56px);left:0;right:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:3px}
+.b{max-width:75%;padding:8px 13px;border-radius:18px;font-size:17px;line-height:1.25;word-wrap:break-word}
+.b.me{align-self:flex-end;background:var(--blue);color:#fff}
+.b.them{align-self:flex-start;background:var(--fill)}
+.b.nudge{outline:2px solid var(--accent)}
+#composer{position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(var(--bottom) - 8px);display:flex;gap:8px;align-items:center;background:var(--bar);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:.5px solid var(--sep)}
+#composer input{flex:1;border:.5px solid var(--sep);background:transparent;border-radius:18px;padding:8px 14px;outline:0;font-size:17px}
+#composer button{color:var(--blue);font-weight:600;font-size:17px}
+#composer .nd{font-size:22px}
+
+/* ---- hojas y alertas ---- */
+#overlay{position:absolute;inset:0;background:#0006;z-index:70;display:none;align-items:flex-end;justify-content:center;animation:fade .2s}
+#overlay.on{display:flex}
+#overlay.mid{align-items:center}
+@keyframes fade{from{opacity:0}}
+.sheet{width:100%;padding:8px 8px calc(var(--bottom) + 4px);animation:up .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet .grp{background:var(--bar);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:14px;overflow:hidden;margin-bottom:8px}
+.sheet .grp>*{display:block;width:100%;padding:17px;font-size:20px;text-align:center;color:var(--blue)}
+.sheet .grp>*+*{border-top:.5px solid var(--sep)}
+.sheet .grp .t{font-size:13px;color:var(--label2);padding:14px}
+.sheet .grp .destr{color:var(--red)}
+.sheet .grp .bold{font-weight:600}
+.alert{width:270px;background:var(--bar);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:14px;text-align:center;overflow:hidden;animation:pop .25s}
+.alert .tx{padding:18px 16px}
+.alert h4{margin:0 0 4px;font-size:17px}
+.alert p{margin:0;font-size:13px}
+.alert .bt{display:flex;border-top:.5px solid var(--sep)}
+.alert .bt button{flex:1;padding:12px;font-size:17px;color:var(--blue)}
+.alert .bt button+button{border-left:.5px solid var(--sep)}
+.alert .bt .destr{color:var(--red)}.alert .bt .bold{font-weight:600}
+.photo-view{max-width:88%;max-height:70%;border-radius:16px}
+
+/* =====================================================
+   TEMA 2 · oscuro, cristal, aurora y partículas
+   (efectos portados de React Bits; animación con GSAP; scroll con Lenis)
+   ===================================================== */
+:root,:root[data-x]{
+  --bg:#07080F; --card:#ffffff0d; --label:#F5F5F7; --label2:#EBEBF59e; --sep:#ffffff1c; --fill:#ffffff14;
+  --blue:#8AB4FF; --accent:#FFB62E; --bar:#15162399; --red:#FF6B6B;
+  --grad:linear-gradient(135deg,#FFE08A 0%,#FFB62E 45%,#FF7A3D 100%);
+}
+@media (prefers-color-scheme:light){:root{--bg:#07080F;--card:#ffffff0d;--label:#F5F5F7;--label2:#EBEBF59e;--sep:#ffffff1c;--fill:#ffffff14;--bar:#15162399}}
+#stage{background:radial-gradient(circle at 50% 30%,#1a1b2e,#05050a)}
+#phone{background:var(--bg);color:var(--label);isolation:isolate}
+#aurora{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+#aurora i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+#aurora i:nth-child(1){width:340px;height:340px;left:-90px;top:-60px;background:#3d36ff}
+#aurora i:nth-child(2){width:300px;height:300px;right:-110px;top:180px;background:#9b3dff;opacity:.4}
+#aurora i:nth-child(3){width:320px;height:320px;left:30px;bottom:-120px;background:#ff9a1f;opacity:.32}
+canvas.layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#confetti{z-index:66}
+#screen{z-index:2;overscroll-behavior:contain}
+#content{padding:calc(var(--top) + 8px) 16px calc(var(--bottom) + 104px);min-height:100%}
+#screen.chat{overflow:hidden}#screen.chat #content{padding:0}
+#screen{padding:0!important}
+
+/* título degradado animado (GradientText) */
+h1.large{background:linear-gradient(90deg,#fff,#FFE08A,#FFB62E,#fff);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:gshift 7s linear infinite}
+@keyframes gshift{to{background-position:-250% 0}}
+.sub{color:var(--label2)}
+
+/* barra superior que aparece al hacer scroll */
+#topbar{position:absolute;top:0;left:0;right:0;height:calc(var(--top) + 44px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:11px;
+  background:var(--bar);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border-bottom:1px solid var(--sep);
+  font-weight:600;font-size:17px;opacity:0;z-index:25;pointer-events:none}
+#phone.inchat #topbar{display:none}
+
+/* cristal + foco de luz (SpotlightCard) */
+.card{position:relative;background:var(--card);border:1px solid #ffffff1a;backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
+  box-shadow:0 10px 30px #0006,inset 0 1px 0 #ffffff14;border-radius:20px}
+.card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),#FFB62E26,transparent 70%)}
+.card:hover::before{opacity:1}
+.row+.row::before{border-top:1px solid #ffffff12}
+.row .val,.row small{color:var(--label2)}
+
+/* botón con brillo (ShinyText) + imán (Magnet) */
+.btn{background:var(--grad);color:#1a1000;position:relative;overflow:hidden;border-radius:16px;box-shadow:0 8px 24px #FF9F0A55,inset 0 1px 0 #fff8;will-change:transform;transition:box-shadow .3s}
+.btn::after{content:"";position:absolute;top:0;bottom:0;width:60%;left:-80%;transform:skewX(-20deg);
+  background:linear-gradient(90deg,transparent,#fff9,transparent);animation:shine 3.2s ease-in-out infinite}
+@keyframes shine{0%,55%{left:-80%}100%{left:140%}}
+.btn:active{transform:scale(.97)}
+
+/* tab bar flotante tipo cristal líquido */
+#tabbar{left:14px;right:14px;bottom:calc(var(--bottom) - 8px);padding:6px;border-radius:34px;border:1px solid #ffffff22;
+  background:#16172199;box-shadow:0 14px 40px #000a,inset 0 1px 0 #ffffff1f}
+@media (max-width:500px){#tabbar{bottom:max(10px,calc(env(safe-area-inset-bottom) - 6px))}}
+#tabbar .ind{position:absolute;top:6px;bottom:6px;left:6px;width:calc((100% - 12px) / 4);border-radius:28px;
+  background:linear-gradient(180deg,#ffffff26,#ffffff10);box-shadow:inset 0 1px 0 #ffffff33,0 4px 14px #0006;transition:transform .5s cubic-bezier(.3,1.35,.5,1)}
+.tab{position:relative;padding:7px 0 6px;color:#9a9ab0;transition:color .25s,transform .25s}
+.tab.on{color:var(--accent)}
+.tab:active{transform:scale(.9)}
+.tab svg{transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
+.tab.on svg{transform:translateY(-1px) scale(1.12);fill-opacity:.28}
+
+/* anillo de racha */
+.hero{padding:26px 16px 20px;overflow:hidden}
+.halo{position:absolute;left:50%;top:128px;width:230px;height:230px;margin:-115px 0 0 -115px;border-radius:50%;
+  background:radial-gradient(circle,#FFB62E40,transparent 65%);animation:halo 3.2s ease-in-out infinite;pointer-events:none}
+@keyframes halo{50%{transform:scale(1.18);opacity:.65}}
+.ring{filter:drop-shadow(0 0 14px #FFB62E55)}
+.ring circle{stroke-width:13}
+.ring .fg{stroke:url(#rg)}
+.ring .num{font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.hero .lbl{letter-spacing:.2px}
+
+/* tira semanal */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:14px 12px}
+.wk{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--label2)}
+.wk b{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--fill);color:var(--label)}
+.wk.done b{background:var(--grad);color:#1a1000}
+.wk.miss b{box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red)}
+.wk.today b{box-shadow:0 0 0 2px #ffffffaa}
+.wk.done.today b{box-shadow:0 0 0 2px #ffffffaa,0 0 16px #FFB62E99}
+
+/* logros */
+.badges{display:flex;gap:10px;overflow-x:auto;padding:14px 14px 16px;scrollbar-width:none}
+.badges::-webkit-scrollbar{display:none}
+.badge{flex:none;width:76px;text-align:center;font-size:12px;color:var(--label2)}
+.badge i{display:flex;width:56px;height:56px;margin:0 auto 6px;border-radius:18px;align-items:center;justify-content:center;font-style:normal;font-size:26px;
+  background:var(--fill);filter:grayscale(1);opacity:.45}
+.badge.on i{background:linear-gradient(135deg,#ffe08a33,#ff7a3d33);box-shadow:inset 0 0 0 1px #FFB62E66,0 0 18px #FFB62E33;filter:none;opacity:1}
+.badge.on{color:var(--label)}
+
+.day.done{background:var(--grad);color:#1a1000;box-shadow:0 0 12px #FFB62E55}
+.day.today{box-shadow:inset 0 0 0 2px #fff}
+.chip{padding:7px 13px;border-radius:15px;background:var(--fill);font-size:15px;color:var(--label)}
+.chip.on{background:var(--grad);color:#1a1000;font-weight:700}
+.row .chip+.chip{margin-left:-4px}
+.post{padding:0;margin-bottom:14px}
+.post img{width:100%;display:block;max-height:440px;object-fit:cover;background:var(--fill)}
+.pinfo{padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pinfo small{margin-left:auto;color:var(--label2);font-size:13px}
+.pinfo .destr{font-size:14px}
+.gsel{color:var(--green)!important;text-align:left!important;padding-left:24px!important}
+.gsel:not(.on){color:var(--label2)!important}
+.b.me{background:linear-gradient(135deg,#5B7CFF,#8A5BFF)}
+.b.them{background:#ffffff18}
+.sw.on{background:linear-gradient(135deg,#5EE08A,#34C759)}
+.sheet .grp,.alert{background:#1a1b2ccc;border:1px solid #ffffff1a}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="phone">
+    <div id="island"></div>
+    <div id="status"><span id="clock">9:41</span><span>100% 🔋</span></div>
+    <div id="aurora"><i></i><i></i><i></i></div>
+    <div id="topbar"></div>
+    <div id="screen"><div id="content"></div></div>
+    <canvas id="confetti" class="layer"></canvas>
+    <nav id="tabbar"></nav>
+    <div id="homebar"></div>
+    <div id="overlay"></div>
+  </div>
+</div>
+<input id="file" type="file" accept="image/*" capture="user" hidden>
+
+<script>
+/* =========================================================
+   Config de Supabase (opcional, para amigos y chat).
+   Pega aquí tu URL y anon key, o configúralas en Ajustes.
+   ========================================================= */
+const CFG = {
+  url: 'https://mjmfuurbqtybdldreokk.supabase.co',   // https://TU-PROYECTO.supabase.co
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qbWZ1dXJicXR5YmRsZHJlb2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4OTcwMjUsImV4cCI6MjEwNzQ3MzAyNX0.ClR1QrXj3E2x9pAi-NZ5JFOREUSR_sFpRebw4v9tksA',   // anon key (pública)
+  vapid: 'BJKi4AgCeIhR7twaknPSIzXMzQX-CJDKxQ-2CIndi6CXs8S1U5qbbQu9FoPvv1urvlhbXRRPU5YNIhYI4d5XbeY', // clave pública de avisos push
+};
+
+/* ---------- utilidades ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const MILESTONES = [3, 7, 14, 30, 50, 100, 180, 365, 500, 1000];
+
+/* ---------- estado persistente ---------- */
+const KEY = 'tefilin-web:v1';
+const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } })();
+const S = {
+  settings: { on: false, time: '07:00', israel: false, chm: 'skip', ttl: 24, ...saved.settings },
+  checkins: saved.checkins || {},
+  supa: { url: CFG.url, key: CFG.key, vapid: CFG.vapid, ...saved.supa },
+  lastNotified: saved.lastNotified || null,
+  pushOn: !!saved.pushOn,
+};
+// Las fotos NO se guardan en el dispositivo: solo queda la fecha del registro.
+for (const k in S.checkins) S.checkins[k] = { at: S.checkins[k].at };
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+
+/* ---------- calendario judío (sin dependencias, vía Intl) ---------- */
+const hebFmt = new Intl.DateTimeFormat('en-u-ca-hebrew', { day: 'numeric', month: 'long' });
+function hebParts(d) {
+  const p = hebFmt.formatToParts(d);
+  const day = +p.find(x => x.type === 'day').value;
+  const m = p.find(x => x.type === 'month').value.toLowerCase();
+  const month = m.startsWith('tish') ? 'tishrei' : m.startsWith('nis') ? 'nisan' : m.startsWith('siv') ? 'sivan' : m === 'av' ? 'av' : m;
+  return { day, month };
+}
+function hebrewString(d) {
+  return new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+}
+function dayInfo(d) {
+  if (d.getDay() === 6) return { exempt: true, reason: 'Shabbat' };
+  const { day, month } = hebParts(d), il = S.settings.israel, skipChm = S.settings.chm === 'skip';
+  const yt = r => ({ exempt: true, reason: 'Yom Tov · ' + r });
+  const chm = r => skipChm ? { exempt: true, reason: 'Jol HaMoed · ' + r } : { exempt: false, reason: null };
+  if (month === 'tishrei') {
+    if (day === 1 || day === 2) return yt('Rosh Hashaná');
+    if (day === 10) return yt('Yom Kipur');
+    if (day === 15) return yt('Sucot');
+    if (day === 16) return il ? chm('Sucot') : yt('Sucot II');
+    if (day >= 17 && day <= 21) return chm('Sucot');
+    if (day === 22) return yt('Shemini Atzeret');
+    if (day === 23 && !il) return yt('Simjat Torá');
+  } else if (month === 'nisan') {
+    if (day === 15) return yt('Pésaj');
+    if (day === 16) return il ? chm('Pésaj') : yt('Pésaj II');
+    if (day >= 17 && day <= 20) return chm('Pésaj');
+    if (day === 21) return yt('Pésaj VII');
+    if (day === 22 && !il) return yt('Pésaj VIII');
+  } else if (month === 'sivan') {
+    if (day === 6) return yt('Shavuot');
+    if (day === 7 && !il) return yt('Shavuot II');
+  } else if (month === 'av') {
+    if (day === 9 || (day === 10 && d.getDay() === 0)) return { exempt: true, reason: "Tisha B'Av (tefilín solo en Minjá)" };
+  }
+  return { exempt: false, reason: null };
+}
+
+/* ---------- racha ---------- */
+function computeStreaks(now = new Date()) {
+  const keys = Object.keys(S.checkins).sort();
+  if (!keys.length) return { current: 0, best: 0 };
+  const today = midnight(now), tk = key(today), first = parseKey(keys[0]);
+  let current = 0;
+  for (const d = new Date(today); d >= first; d.setDate(d.getDate() - 1)) {
+    const k = key(d);
+    if (S.checkins[k]) current++;
+    else if (dayInfo(d).exempt || k === tk) continue;
+    else break;
+  }
+  let best = 0, run = 0;
+  for (const d = new Date(first); d <= today; d.setDate(d.getDate() + 1)) {
+    const k = key(d);
+    if (S.checkins[k]) best = Math.max(best, ++run);
+    else if (!(dayInfo(d).exempt || k === tk)) run = 0;
+  }
+  return { current, best: Math.max(best, current) };
+}
+let serverBest = 0;
+const stats = () => { const s = computeStreaks(); return { streak: s.current, best: Math.max(s.best, serverBest) }; };
+
+/* ---------- UI: hojas, alertas ---------- */
+const overlay = $('#overlay');
+function closeOverlay() { overlay.className = ''; overlay.innerHTML = ''; }
+overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
+function actionSheet(title, actions) {
+  overlay.className = 'on';
+  overlay.innerHTML = `<div class="sheet"><div class="grp">${title ? `<div class="t">${esc(title)}</div>` : ''}${
+    actions.map((a, i) => `<button data-i="${i}" class="${a.destructive ? 'destr' : ''}">${esc(a.label)}</button>`).join('')
+  }</div><div class="grp"><button class="bold" data-i="x">Cancelar</button></div></div>`;
+  overlay.onclick = e => {
+    if (e.target === overlay) return closeOverlay();
+    const b = e.target.closest('button'); if (!b) return;
+    closeOverlay();
+    if (b.dataset.i !== 'x') actions[+b.dataset.i].run();
+  };
+}
+function alertBox(title, msg, buttons = [{ label: 'OK' }]) {
+  overlay.className = 'on mid';
+  overlay.innerHTML = `<div class="alert"><div class="tx"><h4>${esc(title)}</h4><p>${esc(msg || '')}</p></div><div class="bt">${
+    buttons.map((b, i) => `<button data-i="${i}" class="${b.destructive ? 'destr' : ''} ${i === buttons.length - 1 ? 'bold' : ''}">${esc(b.label)}</button>`).join('')
+  }</div></div>`;
+  overlay.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    closeOverlay(); buttons[+b.dataset.i].run?.();
+  };
+}
+const sw = on => `<span class="sw ${on ? 'on' : ''}"></span>`;
+
+/* ---------- navegación ---------- */
+let tab = 'hoy', chat = null, histCursor = (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); })();
+const ICONS = {
+  hoy: '<path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/>',
+  historial: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+  amigos: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.5 0 4 1.7 4 4.5"/>',
+  ajustes: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
+};
+const LABELS = { hoy: 'Hoy', historial: 'Historial', amigos: 'Amigos', ajustes: 'Ajustes' };
+function renderTabs() {
+  const bar = $('#tabbar'), names = Object.keys(ICONS);
+  if (!bar.children.length) {
+    bar.innerHTML = '<span class="ind"></span>' + names.map(t =>
+      `<button class="tab" data-tab="${t}"><svg viewBox="0 0 24 24">${ICONS[t]}</svg>${LABELS[t]}</button>`).join('');
+  }
+  bar.className = chat ? 'hide' : '';
+  $('#phone').classList.toggle('inchat', !!chat);
+  bar.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $('.ind', bar).style.transform = `translateX(${names.indexOf(tab) * 100}%)`;
+}
+$('#tabbar').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  if (tab !== b.dataset.tab) tab = b.dataset.tab;
+  render();
+});
+let lastView = '';
+function render() {
+  renderTabs();
+  const el = $('#screen'), c = $('#content'), view = tab + (chat ? ':chat' : ''), fresh = view !== lastView;
+  lastView = view;
+  el.className = chat ? 'chat' : '';
+  $('#topbar').textContent = LABELS[tab];
+  if (chat) { lenis?.stop(); return renderChat(); }
+  lenis?.start();
+  c.innerHTML = { hoy: viewHoy, historial: viewHistorial, amigos: viewAmigos, ajustes: viewAjustes }[tab]();
+  if (fresh) { el.scrollTop = 0; onScroll(); }
+  lenis?.resize();
+  animateIn(fresh);
+  if (tab === 'amigos') loadFriends();
+}
+
+/* ---------- Hoy ---------- */
+function nextMilestone(n) { return MILESTONES.find(m => m > n) ?? n + 100; }
+function viewHoy() {
+  const now = new Date(), tk = key(now), info = dayInfo(now), done = S.checkins[tk];
+  const { streak, best } = stats(), goal = nextMilestone(streak);
+  const C = 2 * Math.PI * 93, off = C * (1 - Math.min(1, streak / goal));
+  const meta = streak === 0 && best > 0 ? `Racha reiniciada. ¡Supera tu récord de ${best} días!` : `Próxima meta: ${goal} días · 🏆 Récord: ${best}`;
+  const status = done
+    ? `<div class="pad center pop"><div class="big-emoji">✅</div><div style="font-weight:600;font-size:18px;margin-top:4px">¡Tefilín de hoy registrados!</div>
+        ${sessionPhoto ? `<img class="shot" src="${sessionPhoto}">` : ''}<div class="foot">${sessionPhoto ? 'Esta foto no se guarda en tu móvil. ' : ''}Vuelve mañana para mantener la racha.</div></div>`
+    : info.exempt
+    ? `<div class="pad center"><div class="big-emoji">🕯️</div><div style="font-weight:600;font-size:18px;margin-top:4px">Hoy no se usan tefilín</div>
+        <div style="color:var(--accent);font-weight:600;margin-top:4px">${esc(info.reason)}</div><div class="foot">Hoy no cuenta y tu racha está a salvo.</div></div>`
+    : `<div class="pad"><p style="margin:0 0 14px;text-align:center;font-size:16px">Ponte los tefilín y toma una foto para registrar el día.</p>
+        <button class="btn" id="snap">📸  Tomar foto y registrar</button></div>`;
+  const h = now.getHours(), greet = h < 6 ? 'Buenas noches 🌙' : h < 13 ? 'Buenos días ☀️' : h < 20 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙';
+  // tira de los últimos 7 días
+  let week = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), k = key(d);
+    const ex = dayInfo(d).exempt, dn = !!S.checkins[k];
+    const st = dn ? 'done' : ex ? 'ex' : i === 0 ? '' : 'miss';
+    week += `<div class="wk ${st} ${i === 0 ? 'today' : ''}">${'DLMMJVS'[d.getDay()]}<b>${dn ? '✓' : ex ? '🕯' : st === 'miss' ? '✕' : d.getDate()}</b></div>`;
+  }
+  const BADGES = [[3, '🕯️', 'Ner'], [7, '🕎', 'Menorá'], [14, '📜', 'Torá'], [30, '📯', 'Shofar'], [100, '✡️', 'Maguén David'], [365, '👑', 'Keter']];
+  const badges = BADGES.map(([n, e, t]) => `<div class="badge ${best >= n ? 'on' : ''}"><i>${e}</i><b style="display:block">${t}</b>${n} días</div>`).join('');
+  return `<h1 class="large">${greet}</h1>
+    <p class="sub"><span dir="rtl" style="unicode-bidi:isolate">${esc(hebrewString(now))}</span> · ${now.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+    <div class="card hero" data-streak="${streak}" data-c="${C}" data-off="${off}">
+      <div class="halo"></div>
+      <div class="ring"><svg viewBox="0 0 200 200"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset=".5" stop-color="#FFB62E"/><stop offset="1" stop-color="#FF6B3D"/></linearGradient></defs>
+        <circle class="bg" cx="100" cy="100" r="93"/>
+        <circle class="fg" cx="100" cy="100" r="93" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>
+        <div class="mid"><div class="flame ${streak ? '' : 'off'}">🔥</div><div class="num">${streak}</div></div></div>
+      <div class="lbl">${streak === 1 ? 'día de racha' : 'días de racha'}</div><div class="meta">${esc(meta)}</div>
+    </div>
+    <div style="height:16px"></div><div class="card" id="statuscard">${status}</div>
+    <div class="cap">Esta semana</div><div class="card week">${week}</div>
+    <div class="cap">Logros</div><div class="card badges">${badges}</div>
+    <div class="foot" style="text-align:center;margin-top:18px">Cada día cuenta. Shabbat y festividades no rompen tu racha.</div>`;
+}
+$('#screen').addEventListener('click', e => { if (e.target.closest('#snap')) $('#file').click(); });
+$('#file').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const photo = await shrink(f);               // solo en memoria: nunca se guarda en el móvil
+  if (sessionPhoto) URL.revokeObjectURL(sessionPhoto);
+  sessionPhoto = photo ? URL.createObjectURL(photo) : null;
+  const tk = key(new Date());
+  S.checkins[tk] = { at: new Date().toISOString() };
+  persist(); navigator.vibrate?.(30); render(); burst(); syncProfile();
+  if (sb && session) { sb.from('checkins').upsert({ user_id: session.user.id, day: tk }).then(() => {}); syncReminders(); }
+  if (photo && sb && session && groups.length) {
+    const ids = await shareSheet();
+    if (ids.length) await postPhoto(photo, ids);
+  }
+});
+function shrink(file) {   // → Blob JPEG (máx. 720 px)
+  return new Promise(res => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const r = Math.min(1, 720 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = img.width * r; c.height = img.height * r;
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); c.toBlob(b => res(b), 'image/jpeg', 0.72);
+    };
+    img.onerror = () => res(null); img.src = url;
+  });
+}
+
+/* ---------- Historial ---------- */
+function viewHistorial() {
+  const first = new Date(histCursor), n = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(), tk = key(new Date());
+  let cells = '<div class="wd">D</div><div class="wd">L</div><div class="wd">M</div><div class="wd">M</div><div class="wd">J</div><div class="wd">V</div><div class="wd">S</div>';
+  cells += '<div></div>'.repeat(first.getDay());
+  for (let i = 1; i <= n; i++) {
+    const d = new Date(first.getFullYear(), first.getMonth(), i), k = key(d), done = S.checkins[k], fut = k > tk, ex = dayInfo(d).exempt;
+    const cls = done ? 'done' : ex ? 'ex' : fut || k === tk ? '' : 'miss';
+    cells += `<button class="day ${cls} ${fut ? 'fut' : ''} ${k === tk ? 'today' : ''}" ${done ? `data-day="${k}"` : 'disabled'}>${i}</button>`;
+  }
+  return `<h1 class="large">Historial</h1>
+    <div class="mhead"><button data-m="-1">‹</button><b>${first.toLocaleDateString('es', { month: 'long', year: 'numeric' })}</b><button data-m="1">›</button></div>
+    <div class="card"><div class="grid">${cells}</div></div>
+    <div class="legend"><span><i class="dot" style="background:var(--accent)"></i>Hecho</span><span><i class="dot" style="background:var(--fill)"></i>Shabbat / festividad</span>
+      <span><i class="dot" style="box-shadow:inset 0 0 0 1.5px var(--red)"></i>Perdido</span></div>
+    <div class="foot">Toca un día hecho para ver la hora del registro.</div>`;
+}
+$('#screen').addEventListener('click', e => {
+  const m = e.target.closest('[data-m]');
+  if (m) { histCursor = new Date(histCursor.getFullYear(), histCursor.getMonth() + +m.dataset.m, 1); render(); }
+  const d = e.target.closest('[data-day]');
+  if (d) {
+    const at = S.checkins[d.dataset.day]?.at;
+    alertBox('✅ ' + d.dataset.day, at && at.length > 10 ? 'Registrado a las ' + new Date(at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : 'Registrado');
+  }
+});
+
+/* ---------- Ajustes ---------- */
+function viewAjustes() {
+  const s = S.settings;
+  const acct = session
+    ? `<div class="card"><div class="row"><span class="grow">Sesión</span><span class="val">${esc(session.user.email)}</span></div>
+        <button class="row link" data-a="signout">Cerrar sesión</button><button class="row destr" data-a="delete">Eliminar mi cuenta</button></div>`
+    : `<div class="card"><div class="row"><span class="grow val">Sin cuenta: todo se guarda solo en este navegador.</span></div></div>`;
+  return `<h1 class="large">Ajustes</h1>
+    <div class="cap">Recordatorio diario</div>
+    <div class="card">
+      <button class="row" data-a="toggle-on"><span class="grow">Notificaciones</span>${sw(s.on)}</button>
+      ${s.on ? `<div class="row"><span class="grow">Hora del aviso</span><input type="time" id="time" value="${esc(s.time)}" style="background:var(--fill);border:0;border-radius:8px;padding:6px 10px"></div>
+      <button class="row link" data-a="test">Probar notificación</button>` : ''}
+    </div>
+    <div class="foot">Se omite en Shabbat y festividades. ${S.pushOn ? '✅ Avisos push activos: te llegan aunque la app esté cerrada.' : session ? 'Activa el interruptor para recibir avisos con la app cerrada (en iPhone, instala antes la app en la pantalla de inicio).' : 'Sin cuenta, el aviso solo llega con esta app abierta. Inicia sesión en Amigos para recibirlos con la app cerrada.'}</div>
+    <div class="cap">Fotos compartidas</div>
+    <div class="card"><div class="row"><span class="grow">Desaparecen tras</span>${[6, 24, 72].map(h => `<button data-a="ttl" data-h="${h}" class="chip ${s.ttl === h ? 'on' : ''}">${h} h</button>`).join('')}</div></div>
+    <div class="foot">Tu foto nunca se guarda en el móvil. Solo se sube si eliges compartirla con un grupo, y se borra del servidor automáticamente.</div>
+    <div class="cap">Calendario</div>
+    <div class="card">
+      <button class="row tall" data-a="israel"><span class="grow">Vivo en Israel<small>Afecta al segundo día de Yom Tov</small></span>${sw(s.israel)}</button>
+      <button class="row tall" data-a="chm"><span class="grow">Sin tefilín en Jol HaMoed<small>Costumbre asquenazí</small></span>${sw(s.chm === 'skip')}</button>
+    </div>
+    <div class="foot">Sin tefilín: Shabbat, Rosh Hashaná, Yom Kipur, Sucot, Shemini Atzeret/Simjat Torá, Pésaj, Shavuot y Tisha B'Av (mañana). No suman ni rompen la racha.</div>
+    <div class="cap">Cuenta y privacidad</div>${acct}
+    <div class="cap">Servidor (amigos y chat)</div>
+    <div class="card">
+      <div class="row"><input class="field" id="surl" placeholder="Supabase URL" value="${esc(S.supa.url)}" autocapitalize="none"></div>
+      <div class="row"><input class="field" id="skey" placeholder="Supabase anon key" value="${esc(S.supa.key)}" autocapitalize="none"></div>
+      <div class="row"><input class="field" id="svapid" placeholder="Clave pública VAPID (avisos push)" value="${esc(S.supa.vapid)}" autocapitalize="none"></div>
+      <button class="row link" data-a="save-server">Guardar y recargar</button>
+    </div>
+    <div class="foot">A tus amigos solo se comparte tu racha. Tus registros diarios se sincronizan con tu cuenta para recuperarlos si cambias de móvil.</div>`;
+}
+$('#screen').addEventListener('click', async e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a, s = S.settings;
+  if (a === 'toggle-on') {
+    if (!s.on) {
+      if (!('Notification' in window)) return alertBox('No disponible', 'Este navegador no soporta notificaciones.');
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') return alertBox('Notificaciones', 'Activa el permiso de notificaciones para este sitio en tu navegador.');
+    }
+    s.on = !s.on;
+    if (s.on && session) enablePush().then(ok => { if (!ok && CFG.vapid) alertBox('Avisos push', 'No se pudieron activar. En iPhone, instala primero la app en la pantalla de inicio.'); render(); });
+  }
+  else if (a === 'ttl') s.ttl = +b.dataset.h;
+  else if (a === 'israel') s.israel = !s.israel;
+  else if (a === 'chm') s.chm = s.chm === 'skip' ? 'wear' : 'skip';
+  else if (a === 'test') { notify('Así se verá tu recordatorio diario.'); return; }
+  else if (a === 'signout') { await sb.auth.signOut(); return; }
+  else if (a === 'delete') return alertBox('Eliminar cuenta', 'Se borrarán tu perfil, amigos, mensajes y tu mejor racha del servidor. No se puede deshacer.', [
+    { label: 'Cancelar' }, { label: 'Eliminar', destructive: true, run: async () => {
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) return alertBox('Error', error.message);
+      await sb.auth.signOut(); alertBox('Cuenta eliminada', 'Tu cuenta fue eliminada.');
+    } }]);
+  else if (a === 'save-server') { S.supa = { url: $('#surl').value.trim(), key: $('#skey').value.trim(), vapid: $('#svapid').value.trim() }; persist(); location.reload(); return; }
+  persist(); render(); syncReminders();
+});
+$('#screen').addEventListener('change', e => { if (e.target.id === 'time') { S.settings.time = e.target.value; S.lastNotified = null; persist(); syncReminders(); } });
+
+/* ---------- notificaciones (mientras la pestaña esté abierta) ---------- */
+function notify(body) {
+  if (Notification.permission !== 'granted') return;
+  new Notification('🕎 Hora de los tefilín', { body });
+}
+setInterval(() => {
+  const s = S.settings, now = new Date(), tk = key(now);
+  if (!s.on || S.pushOn || !('Notification' in window) || S.lastNotified === tk || S.checkins[tk] || dayInfo(now).exempt) return;
+  const [h, m] = s.time.split(':').map(Number);
+  if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
+  const { streak } = stats();
+  notify(streak ? `Llevas ${streak} día${streak === 1 ? '' : 's'} de racha. ¡No la rompas!` : 'Empieza tu racha hoy.');
+  S.lastNotified = tk; persist();
+}, 20000);
+
+/* ---------- Supabase: amigos y chat ---------- */
+let sb = null, session = null, friends = [], incoming = [], channel = null;
+const configured = () => !!(S.supa.url && S.supa.key);
+async function initSupabase() {
+  if (!configured()) return;
+  await new Promise((ok, no) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js';
+    sc.onload = ok; sc.onerror = no; document.head.appendChild(sc);
+  }).catch(() => null);
+  if (!window.supabase) return;
+  sb = window.supabase.createClient(S.supa.url, S.supa.key);
+  const { data } = await sb.auth.getSession(); session = data.session;
+  sb.auth.onAuthStateChange((_e, s) => { session = s; afterSession(); });
+  afterSession();
+}
+async function afterSession() {
+  if (session) {
+    const { data } = await sb.from('profiles').select('best_streak').eq('id', session.user.id).maybeSingle();
+    serverBest = data?.best_streak ?? 0;
+    await syncCheckins(); syncProfile(); loadGroups();
+    if (S.settings.on && S.pushOn) enablePush(); else syncReminders();
+  } else { serverBest = 0; groups = []; grp = null; S.pushOn = false; persist(); }
+  if (!chat) render();
+}
+function syncProfile() {
+  if (!sb || !session) return;
+  const { streak, best } = stats(), last = Object.keys(S.checkins).sort().pop() ?? null;
+  sb.from('profiles').update({ streak, best_streak: best, last_checkin: last }).eq('id', session.user.id).then(() => {});
+}
+
+let authMode = 'register';
+function viewAmigos() {
+  const head = '<h1 class="large">Amigos</h1>';
+  if (!configured()) return head + `<div class="card pad"><p style="margin:0;color:var(--label2)">Para usar amigos y chat, configura Supabase en <b>Ajustes → Servidor</b> (usa <code>supabase/schema.sql</code> del proyecto).</p></div>`;
+  if (!sb) return head + '<p class="sub">Conectando…</p>';
+  if (!session) return head + `<p class="sub">Crea una cuenta para añadir amigos y motivaros a ponerse los tefilín.</p>
+    <div class="card">
+      ${authMode === 'register' ? '<div class="row"><input class="field" id="au-user" placeholder="Nombre de usuario" autocapitalize="none"></div>' : ''}
+      <div class="row"><input class="field" id="au-mail" type="email" placeholder="Correo" autocapitalize="none"></div>
+      <div class="row"><input class="field" id="au-pass" type="password" placeholder="Contraseña (mín. 6)"></div>
+    </div><div style="height:16px"></div>
+    <button class="btn" data-f="auth">${authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</button>
+    <button class="row link" style="justify-content:center;margin-top:8px" data-f="mode">${authMode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}</button>`;
+  if (grp) return viewGroup();
+  const tk = key(new Date());
+  const groupsHtml = `
+    <div class="cap">Grupos</div>
+    ${groups.length ? `<div class="card">${groups.map(g =>
+      `<button class="row tall chev" data-g="open" data-id="${esc(g.id)}"><span class="grow"><b>${esc(g.name)}</b><small>Código ${esc(g.code)}</small></span></button>`).join('')}</div>`
+      : '<div class="foot">Crea un grupo (familia, sinagoga, amigos) para compartir tu foto del día. La foto se borra sola.</div>'}
+    <div class="card" style="margin-top:12px">
+      <div class="row"><input class="field" id="g-new" placeholder="Nombre del nuevo grupo"><button class="link" data-g="create" style="font-weight:600">Crear</button></div>
+      <div class="row"><input class="field" id="g-code" placeholder="Código para unirte" autocapitalize="characters"><button class="link" data-g="join" style="font-weight:600">Unirme</button></div>
+    </div>`;
+  return head + `
+    <div class="cap">Añadir por nombre de usuario</div>
+    <div class="card"><div class="row"><input class="field" id="add-user" placeholder="usuario" autocapitalize="none"><button class="link" data-f="add" style="font-weight:600">Añadir</button></div>
+    <button class="row link" data-f="invite">📣 Invitar a alguien</button></div>
+    ${incoming.length ? `<div class="cap">Solicitudes</div><div class="card">${incoming.map(r =>
+      `<div class="row"><span class="grow">${esc(r.profile?.username ?? 'usuario')}</span><button class="link" data-f="accept" data-id="${r.id}" style="font-weight:600">Aceptar</button><button class="destr" data-f="decline" data-id="${r.id}">✕</button></div>`).join('')}</div>` : ''}
+    <div class="cap">Amigos</div>
+    ${friends.length ? `<div class="card">${friends.map(f =>
+      `<button class="row tall chev" data-f="chat" data-id="${f.id}" data-name="${esc(f.username)}"><span class="grow"><b>${esc(f.username)}</b><small>${f.last_checkin === tk ? '✅ Ya se los puso hoy' : 'Aún no se los pone hoy'}</small></span>
+        <span style="text-align:right"><b style="color:var(--accent)">🔥 ${+f.streak}</b><small>🏆 ${+f.best_streak}</small></span></button>`).join('')}</div>`
+      : '<div class="foot">Aún no tienes amigos. ¡Invita a alguien y motívalo a ponerse los tefilín!</div>'}
+    ${groupsHtml}`;
+}
+async function loadFriends() {
+  if (!sb || !session) return;
+  const me = session.user.id;
+  const { data: rows } = await sb.from('friendships').select('*').or(`requester.eq.${me},addressee.eq.${me}`);
+  const fs = rows ?? [], ids = [...new Set(fs.map(f => f.requester === me ? f.addressee : f.requester))];
+  const { data: profs } = ids.length ? await sb.from('profiles').select('id,username,streak,best_streak,last_checkin').in('id', ids) : { data: [] };
+  const by = new Map((profs ?? []).map(p => [p.id, p]));
+  const nf = fs.filter(f => f.status === 'accepted').flatMap(f => by.get(f.requester === me ? f.addressee : f.requester) ?? []);
+  const ni = fs.filter(f => f.status === 'pending' && f.addressee === me).map(f => ({ ...f, profile: by.get(f.requester) }));
+  if (JSON.stringify([nf, ni]) !== JSON.stringify([friends, incoming]) && tab === 'amigos' && !chat) { friends = nf; incoming = ni; render(); }
+  else { friends = nf; incoming = ni; }
+}
+$('#screen').addEventListener('click', async e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  const f = b.dataset.f;
+  if (f === 'mode') { authMode = authMode === 'login' ? 'register' : 'login'; return render(); }
+  if (f === 'auth') {
+    const email = $('#au-mail').value.trim(), password = $('#au-pass').value, username = $('#au-user')?.value.trim().toLowerCase();
+    const { error } = authMode === 'login' ? await sb.auth.signInWithPassword({ email, password })
+      : await sb.auth.signUp({ email, password, options: { data: { username } } });
+    if (error) alertBox('Error', error.message.includes('profiles_username') ? 'Ese nombre de usuario ya existe' : error.message);
+    else if (authMode === 'register') alertBox('Cuenta creada', 'Si te llega un correo de confirmación, ábrelo y luego inicia sesión.');
+    return;
+  }
+  const me = session.user.id;
+  if (f === 'add') {
+    const name = $('#add-user').value.trim().toLowerCase(); if (!name) return;
+    const { data: t } = await sb.from('profiles').select('id').eq('username', name).maybeSingle();
+    if (!t) return alertBox('No encontrado', `No existe el usuario "${name}".`);
+    if (t.id === me) return alertBox('Ese eres tú 🙂');
+    const { error } = await sb.from('friendships').insert({ requester: me, addressee: t.id });
+    return error ? alertBox('No se pudo enviar', error.code === '23505' ? 'Ya existe una solicitud o amistad.' : error.message)
+                 : (alertBox('Solicitud enviada', `Esperando a que ${name} acepte.`), $('#add-user').value = '');
+  }
+  if (f === 'accept') { await sb.from('friendships').update({ status: 'accepted' }).eq('id', b.dataset.id); return loadFriends(); }
+  if (f === 'decline') { await sb.from('friendships').delete().eq('id', b.dataset.id); return loadFriends(); }
+  if (f === 'invite') {
+    const { streak } = stats(), uname = session.user.user_metadata?.username ?? '';
+    const text = `🕎 Llevo ${streak} días de racha de tefilín. ¡Únete y vamos juntos! Mi usuario: ${uname}`;
+    if (navigator.share) navigator.share({ text }).catch(() => {}); else navigator.clipboard?.writeText(text).then(() => alertBox('Copiado', 'Mensaje de invitación copiado.'));
+    return;
+  }
+  if (f === 'chat') { chat = { id: b.dataset.id, username: b.dataset.name, msgs: [] }; render(); }
+});
+
+/* ---------- Chat ---------- */
+async function renderChat() {
+  const me = session.user.id, fid = chat.id;
+  $('#content').innerHTML = `
+    <div class="navbar"><button class="back" id="back">‹ Amigos</button><b>${esc(chat.username)}</b><button class="more" id="more">⋯</button></div>
+    <div id="msgs" data-lenis-prevent></div>
+    <div id="composer"><button class="nd" id="nudge" title="Recordarle">👊</button><input id="txt" placeholder="Mensaje" enterkeyhint="send"><button id="send">Enviar</button></div>`;
+  const paint = () => {
+    const box = $('#msgs'); if (!box) return;
+    box.innerHTML = chat.msgs.map(m => `<div class="b ${m.sender === me ? 'me' : 'them'} ${m.kind === 'nudge' ? 'nudge' : ''}">${esc(m.body)}</div>`).join('');
+    box.scrollTop = box.scrollHeight;
+  };
+  const send = async (body, kind = 'text') => {
+    if (!body.trim()) return;
+    const { data } = await sb.from('messages').insert({ sender: me, receiver: fid, body: body.trim(), kind }).select().single();
+    if (data) { chat.msgs.push(data); paint(); }
+  };
+  const { data } = await sb.from('messages').select('*')
+    .or(`and(sender.eq.${me},receiver.eq.${fid}),and(sender.eq.${fid},receiver.eq.${me})`).order('created_at', { ascending: false }).limit(100);
+  chat.msgs = (data ?? []).reverse(); paint();
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel(`chat:${me}:${fid}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver=eq.${me}` }, p => {
+    const m = p.new; if (m.sender === fid && !chat.msgs.some(x => x.id === m.id)) { chat.msgs.push(m); paint(); }
+  }).subscribe();
+  const doSend = () => { const t = $('#txt'); send(t.value); t.value = ''; };
+  $('#send').onclick = doSend;
+  $('#txt').onkeydown = e => { if (e.key === 'Enter') doSend(); };
+  $('#nudge').onclick = () => send('¡Ponte los tefilín! 👊 No rompas la racha.', 'nudge');
+  $('#back').onclick = () => { if (channel) sb.removeChannel(channel); channel = null; chat = null; render(); loadFriends(); };
+  $('#more').onclick = () => actionSheet(chat.username, [
+    { label: 'Reportar usuario', run: async () => { await sb.from('reports').insert({ reporter: me, reported: fid, reason: 'Contenido inapropiado' }); alertBox('Gracias', 'Revisaremos tu reporte.'); } },
+    { label: 'Bloquear y eliminar amigo', destructive: true, run: async () => {
+      await sb.from('blocks').upsert({ blocker: me, blocked: fid });
+      await sb.from('friendships').delete().or(`and(requester.eq.${me},addressee.eq.${fid}),and(requester.eq.${fid},addressee.eq.${me})`);
+      $('#back').click();
+    } },
+  ]);
+}
+
+/* =========================================================
+   Sincronización, grupos con fotos efímeras y avisos push
+   ========================================================= */
+let groups = [], grp = null, grpPosts = [], grpChannel = null, sessionPhoto = null;
+
+// Restaurar / subir los registros diarios (la racha sobrevive a reinstalar)
+async function syncCheckins() {
+  if (!sb || !session) return;
+  const { data } = await sb.from('checkins').select('day');   // RLS: solo los míos
+  const remote = new Set((data ?? []).map(r => r.day));
+  let changed = false;
+  for (const d of remote) if (!S.checkins[d]) { S.checkins[d] = { at: d }; changed = true; }
+  const missing = Object.keys(S.checkins).filter(d => !remote.has(d)).map(day => ({ user_id: session.user.id, day }));
+  if (missing.length) await sb.from('checkins').upsert(missing);
+  if (changed) { persist(); if (!chat) render(); }
+}
+
+// Avisos push: el servidor envía a la hora elegida, saltando Shabbat/festividades y los días ya registrados
+const b64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+async function enablePush() {
+  const vapid = S.supa.vapid || CFG.vapid;
+  if (!sb || !session || !vapid || !('PushManager' in window) || !('serviceWorker' in navigator)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(vapid) });
+    const j = sub.toJSON();
+    const { error } = await sb.from('push_subs').upsert({ endpoint: j.endpoint, user_id: session.user.id, p256dh: j.keys.p256dh, auth: j.keys.auth });
+    if (error) return false;
+    S.pushOn = true; persist(); await syncReminders(); return true;
+  } catch { return false; }
+}
+async function syncReminders() {
+  if (!sb || !session || !S.pushOn) return;
+  const s = S.settings, [h, m] = s.time.split(':').map(Number), now = new Date(), { streak } = stats(), rows = [];
+  if (s.on) for (let i = 0; i < 45; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, h, m, 0);
+    if (d <= now || (i === 0 && S.checkins[key(d)]) || dayInfo(d).exempt) continue;
+    rows.push({ user_id: session.user.id, day: key(d), fire_at: d.toISOString(),
+      body: streak ? `Llevas ${streak} día${streak === 1 ? '' : 's'} de racha. ¡No la rompas!` : 'Empieza tu racha hoy.' });
+  }
+  await sb.from('reminders').delete().eq('user_id', session.user.id).eq('sent', false);
+  if (rows.length) await sb.from('reminders').upsert(rows, { onConflict: 'user_id,day' });
+}
+
+// Compartir la foto con grupos (se sube, caduca y se borra sola)
+function shareSheet() {
+  return new Promise(res => {
+    const on = new Set(groups.map(g => g.id));
+    overlay.className = 'on';
+    const paint = () => {
+      overlay.innerHTML = `<div class="sheet"><div class="grp"><div class="t">Compartir tu foto con… (desaparece en ${S.settings.ttl} h)</div>${
+        groups.map(g => `<button class="gsel ${on.has(g.id) ? 'on' : ''}" data-id="${esc(g.id)}">${on.has(g.id) ? '✓' : '○'}  ${esc(g.name)}</button>`).join('')
+      }<button class="bold" data-go>Compartir</button></div><div class="grp"><button data-no>No compartir</button></div></div>`;
+    };
+    paint();
+    overlay.onclick = e => {
+      const b = e.target.closest('button');
+      if (!b) { if (e.target === overlay) { closeOverlay(); res([]); } return; }
+      if (b.dataset.id) { on.has(b.dataset.id) ? on.delete(b.dataset.id) : on.add(b.dataset.id); return paint(); }
+      closeOverlay(); res(b.hasAttribute('data-go') ? [...on] : []);
+    };
+  });
+}
+async function postPhoto(blob, groupIds) {
+  const uid = session.user.id, path = `${uid}/${Date.now()}.jpg`, ttl = S.settings.ttl;
+  const up = await sb.storage.from('checkins').upload(path, blob, { contentType: 'image/jpeg' });
+  if (up.error) return alertBox('No se pudo subir', up.error.message);
+  const expires = new Date(Date.now() + ttl * 3600_000).toISOString(), { streak } = stats();
+  const { error } = await sb.from('group_posts').insert(groupIds.map(group_id => ({ group_id, user_id: uid, photo_path: path, streak, expires_at: expires })));
+  if (error) return alertBox('No se pudo compartir', error.message);
+  alertBox('¡Compartido! 📸', `Tu foto desaparecerá en ${ttl} h.`);
+}
+
+// Grupos
+async function loadGroups() {
+  if (!sb || !session) return;
+  const { data } = await sb.from('groups').select('id,name,owner,code').order('created_at');
+  const next = data ?? [];
+  if (JSON.stringify(next) !== JSON.stringify(groups)) { groups = next; if (tab === 'amigos' && !chat && !grp) render(); } else groups = next;
+}
+async function loadPosts() {
+  if (!sb || !grp) return;
+  const { data } = await sb.from('group_posts').select('id,user_id,photo_path,streak,created_at,expires_at,profiles(username)')
+    .eq('group_id', grp.id).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
+  const posts = data ?? [], paths = [...new Set(posts.map(p => p.photo_path))];
+  const { data: urls } = paths.length ? await sb.storage.from('checkins').createSignedUrls(paths, 3600) : { data: [] };
+  const m = new Map((urls ?? []).map(u => [u.path, u.signedUrl]));
+  if (!grp) return;
+  grpPosts = posts.map(p => ({ ...p, url: m.get(p.photo_path) }));
+  render();
+}
+function closeGroup() {
+  if (grpChannel) sb.removeChannel(grpChannel);
+  grpChannel = null; grp = null; grpPosts = []; render(); loadGroups();
+}
+function viewGroup() {
+  const me = session.user.id, now = Date.now(), owner = grp.owner === me;
+  const left = iso => { const h = Math.max(0, (new Date(iso) - now) / 36e5); return h >= 1 ? `${Math.floor(h)} h` : `${Math.max(1, Math.round(h * 60))} min`; };
+  return `<div style="padding-top:2px"><button class="link" data-g="back" style="font-size:17px">‹ Amigos</button></div>
+    <h1 class="large">${esc(grp.name)}</h1>
+    <p class="sub">Código de invitación: <b style="color:var(--accent)">${esc(grp.code)}</b></p>
+    <div class="card"><button class="row link" data-g="invite">📣 Invitar al grupo</button>
+      <button class="row destr" data-g="${owner ? 'delgroup' : 'leave'}">${owner ? 'Eliminar grupo' : 'Salir del grupo'}</button></div>
+    <div class="cap">Fotos vigentes</div>
+    ${grpPosts.length ? grpPosts.map(p => `<div class="card post">${p.url ? `<img src="${esc(p.url)}" loading="lazy" alt="">` : ''}
+      <div class="pinfo"><b>${esc(p.profiles?.username ?? 'usuario')}</b><span>🔥 ${+p.streak}</span><small>desaparece en ${left(p.expires_at)}</small>
+      ${p.user_id === me ? `<button class="destr" data-g="delpost" data-id="${+p.id}">Eliminar</button>` : ''}</div></div>`).join('')
+      : '<div class="foot">Nadie ha compartido todavía. ¡Sé el primero en ponerte los tefilín hoy!</div>'}
+    <div class="foot">Las fotos se borran solas del servidor al caducar.</div>`;
+}
+$('#screen').addEventListener('click', async e => {
+  const b = e.target.closest('[data-g]'); if (!b || !sb || !session) return;
+  const g = b.dataset.g, me = session.user.id;
+  if (g === 'create') {
+    const name = $('#g-new').value.trim(); if (name.length < 2) return;
+    const { error } = await sb.rpc('create_group', { group_name: name });
+    return error ? alertBox('Error', error.message) : loadGroups();
+  }
+  if (g === 'join') {
+    const code = $('#g-code').value.trim(); if (!code) return;
+    const { error } = await sb.rpc('join_group', { invite_code: code });
+    return error ? alertBox('Error', error.message) : loadGroups();
+  }
+  if (g === 'open') {
+    grp = groups.find(x => x.id === b.dataset.id); grpPosts = []; render(); loadPosts();
+    grpChannel = sb.channel('grp:' + grp.id).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_posts', filter: `group_id=eq.${grp.id}` }, loadPosts).subscribe();
+    return;
+  }
+  if (g === 'back') return closeGroup();
+  if (g === 'invite') {
+    const text = `🕎 Únete a mi grupo "${grp.name}" en Tefilín. Código: ${grp.code}`;
+    return navigator.share ? navigator.share({ text }).catch(() => {}) : navigator.clipboard?.writeText(text).then(() => alertBox('Copiado', 'Invitación copiada.'));
+  }
+  if (g === 'leave') return alertBox('Salir del grupo', `¿Salir de "${grp.name}"?`, [{ label: 'Cancelar' }, { label: 'Salir', destructive: true, run: async () => { await sb.from('group_members').delete().eq('group_id', grp.id).eq('user_id', me); closeGroup(); } }]);
+  if (g === 'delgroup') return alertBox('Eliminar grupo', 'Se borrarán el grupo y todas sus fotos.', [{ label: 'Cancelar' }, { label: 'Eliminar', destructive: true, run: async () => { await sb.from('groups').delete().eq('id', grp.id); closeGroup(); } }]);
+  if (g === 'delpost') { await sb.from('group_posts').delete().eq('id', b.dataset.id); loadPosts(); }
+});
+setInterval(() => { if (grp && document.visibilityState === 'visible') loadPosts(); }, 60000);
+
+/* =========================================================
+   Efectos visuales
+   · GSAP  (greensock/GSAP)          → entradas, anillo, contador, aurora
+   · Lenis (darkroomengineering)     → scroll suave
+   · React Bits (DavidHDev) portado a JS puro:
+       Aurora, Particles, GradientText, ShinyText, CountUp, SpotlightCard, Magnet
+   ========================================================= */
+const G = window.gsap, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let lenis = null;
+
+function onScroll() {
+  const y = $('#screen').scrollTop;
+  $('#topbar').style.opacity = Math.max(0, Math.min(1, (y - 50) / 30));
+}
+$('#screen').addEventListener('scroll', onScroll, { passive: true });
+
+function initLenis() {
+  if (!window.Lenis || reduce) return;
+  lenis = new Lenis({ wrapper: $('#screen'), content: $('#content'), duration: 1.15, smoothWheel: true,
+    easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+  if (G) { G.ticker.add(t => lenis.raf(t * 1000)); G.ticker.lagSmoothing(0); }
+  else { const f = t => { lenis.raf(t); requestAnimationFrame(f); }; requestAnimationFrame(f); }
+}
+
+// entrada escalonada + anillo y contador de la racha (CountUp)
+function animateIn(fresh) {
+  if (!G || reduce) return;
+  if (fresh) G.from([...$('#content').children], { y: 30, opacity: 0, scale: .97, duration: .75, stagger: .07, ease: 'power3.out', clearProps: 'transform,opacity' });
+  const hero = $('.hero'); if (!hero) return;
+  const n = +hero.dataset.streak, C = +hero.dataset.c, off = +hero.dataset.off, num = $('.num', hero), o = { v: 0 };
+  num.textContent = 0;
+  G.fromTo('.ring .fg', { strokeDashoffset: C }, { strokeDashoffset: off, duration: 1.4, ease: 'power3.out', delay: .15 });
+  G.to(o, { v: n, duration: 1.3, ease: 'power2.out', delay: .15, onUpdate: () => { num.textContent = Math.round(o.v); } });
+  G.fromTo('.flame', { scale: .4, rotate: -20 }, { scale: 1, rotate: 0, duration: .9, ease: 'elastic.out(1,.5)' });
+}
+
+// aurora: manchas de color a la deriva
+function initAurora() {
+  if (!G || reduce) return;
+  document.querySelectorAll('#aurora i').forEach((el, i) => {
+    const drift = () => G.to(el, { x: G.utils.random(-70, 70), y: G.utils.random(-90, 90), scale: G.utils.random(.85, 1.3),
+      duration: G.utils.random(7, 12), ease: 'sine.inOut', onComplete: drift });
+    drift();
+  });
+}
+
+// partículas (brasas doradas) + confeti
+const conf = $('#confetti'), cctx = conf.getContext('2d');
+let W = 390, H = 844, bits = [];
+function fitCanvases() {
+  const r = $('#phone').getBoundingClientRect(); W = conf.width = r.width; H = conf.height = r.height;
+}
+fitCanvases(); addEventListener('resize', fitCanvases);
+const rnd = (a, b) => a + Math.random() * (b - a);
+function frame() {
+  cctx.clearRect(0, 0, W, H);
+  for (let i = bits.length - 1; i >= 0; i--) {
+    const b = bits[i]; b.vy += .22; b.vx *= .992; b.x += b.vx; b.y += b.vy; b.rot += b.vr; b.life--;
+    if (b.life <= 0 || b.y > H + 20) { bits.splice(i, 1); continue; }
+    cctx.save(); cctx.translate(b.x, b.y); cctx.rotate(b.rot); cctx.globalAlpha = Math.min(1, b.life / 30);
+    cctx.fillStyle = b.c; cctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cctx.restore();
+  }
+  requestAnimationFrame(frame);
+}
+function burst() {
+  if (reduce) return;
+  const el = $('#statuscard') || $('.hero'), pr = $('#phone').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const x = r.left - pr.left + r.width / 2, y = r.top - pr.top + r.height / 2, cols = ['#FFE08A', '#FFB62E', '#FF7A3D', '#fff', '#8AB4FF', '#B58CFF'];
+  for (let i = 0; i < 110; i++) {
+    const a = rnd(0, Math.PI * 2), s = rnd(4, 13);
+    bits.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 5, rot: rnd(0, 6), vr: rnd(-.3, .3), w: rnd(5, 10), h: rnd(3, 6), c: cols[i % cols.length], life: rnd(70, 130) });
+  }
+}
+
+// SpotlightCard: el foco sigue al puntero · Magnet: el botón atrae al puntero
+let magnet = null;
+$('#screen').addEventListener('pointermove', e => {
+  const c = e.target.closest('.card');
+  if (c) { const r = c.getBoundingClientRect(); c.style.setProperty('--mx', e.clientX - r.left + 'px'); c.style.setProperty('--my', e.clientY - r.top + 'px'); }
+  const b = e.target.closest('.btn');
+  if (magnet && magnet !== b) { G?.to(magnet, { x: 0, y: 0, duration: .6, ease: 'elastic.out(1,.4)' }); magnet = null; }
+  if (b && G && !reduce) {
+    const r = b.getBoundingClientRect(); magnet = b;
+    G.to(b, { x: (e.clientX - r.left - r.width / 2) * .12, y: (e.clientY - r.top - r.height / 2) * .3, duration: .35, ease: 'power2.out' });
+  }
+});
+$('#screen').addEventListener('pointerleave', () => { if (magnet) { G?.to(magnet, { x: 0, y: 0, duration: .6 }); magnet = null; } });
+
+/* ---------- arranque ---------- */
+const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit', hour12: false }); };
+tick(); setInterval(tick, 15000);
+let lastDay = key(new Date());
+setInterval(() => { const k = key(new Date()); if (k !== lastDay) { lastDay = k; if (!chat) render(); } }, 30000);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+initLenis(); initAurora(); requestAnimationFrame(frame);
+render();
+initSupabase();
+</script>
+</body>
+</html>
